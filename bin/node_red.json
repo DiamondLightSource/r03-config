@@ -1,0 +1,862 @@
+[
+    {
+        "id": "8d9ec36d.8f23e8",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "triggered queue",
+        "func": "// if queue doesn't exist, create it\ncontext.queue = context.queue || [];\ncontext.busy = context.busy || false;\n\n// if the msg is a trigger one release next message\nif (msg.hasOwnProperty(\"trigger\")) {\n    if (context.queue.length > 0) {\n        var m = context.queue.shift();\n        return {payload:m};\n    }\n    else {\n        context.busy = false;\n    }\n}\nelse {\n    if (context.busy) {\n        // if busy add to queue\n        context.queue.push(msg.payload);\n    }\n    else {\n        // otherwise we are empty so just pass through and set busy flag\n        context.busy = true;\n        return msg;\n    }\n}\n\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 280,
+        "y": 340,
+        "wires": [
+            [
+                "3794e0e5.cad2f"
+            ]
+        ]
+    },
+    {
+        "id": "2292dd5.bd289a2",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "set trigger",
+        "func": "// handle the return from the exec in here \n// if all is good then set msg.trigger property to exist\nmsg.trigger = 1;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 850,
+        "y": 680,
+        "wires": [
+            [
+                "8d9ec36d.8f23e8",
+                "19090160.d41617"
+            ]
+        ]
+    },
+    {
+        "id": "3794e0e5.cad2f",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "hold name and username",
+        "func": "var name=msg.tweet.user.screen_name\nvar nickname=msg.tweet.user.name\nflow.set(\"name\",name)\nflow.set(\"nickname\",nickname)\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 490,
+        "y": 340,
+        "wires": [
+            [
+                "d0e45263.696198"
+            ]
+        ]
+    },
+    {
+        "id": "dcb1ce64.78a3",
+        "type": "inject",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "x": 110,
+        "y": 100,
+        "wires": [
+            [
+                "a159c72c.c0bf4",
+                "5e3d4a0e.2fdaec",
+                "6d043f0f.8d5e68",
+                "bb1c84bf.eebbf8"
+            ]
+        ]
+    },
+    {
+        "id": "a159c72c.c0bf4",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "bash $HOME/testscripts/gdastart.sh &",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "Run GDA",
+        "x": 300,
+        "y": 40,
+        "wires": [
+            [
+                "ca98d39c.b685b8"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "5e3d4a0e.2fdaec",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "python3 robot_controller.py",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "Robot Socket Server",
+        "x": 340,
+        "y": 160,
+        "wires": [
+            [
+                "3b714376.7bfc4c"
+            ],
+            [
+                "2e92e813.0a0568"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "6d043f0f.8d5e68",
+        "type": "delay",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "60",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "x": 300,
+        "y": 100,
+        "wires": [
+            [
+                "aa6d30d5.54036"
+            ]
+        ]
+    },
+    {
+        "id": "d0e45263.696198",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "parse",
+        "func": "var str = msg.payload;\nvar punctuless = str.replace(/[,.!?;:()]/g,\" \");\nvar msg = { payload:punctuless};\n\noutputMsg=[];\nvar words=msg.payload.split(\" \");\nfor (var word in words) {\n    outputMsg.push({payload:words[word]});\n}\nreturn [ outputMsg ];",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 670,
+        "y": 340,
+        "wires": [
+            [
+                "4531a03a.9609d"
+            ]
+        ]
+    },
+    {
+        "id": "8c38e1.41edef2",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "set scan number flow-wide",
+        "func": "var tweetDone = flow.get(\"scanset\");\n\nif (tweetDone === \"false\") {\n    flow.set(\"sample\",msg.payload);\n    flow.set(\"scanset\",\"true\");\n}\n\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1120,
+        "y": 320,
+        "wires": [
+            [
+                "7d183c53.5ac7ac",
+                "ae93151b.7a77"
+            ]
+        ]
+    },
+    {
+        "id": "caf7d3fc.48551",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "return tweet",
+        "func": "var whichSample =flow.get(\"sample\");\nvar name = flow.get(\"name\");\nvar nickname = flow.get(\"nickname\");\n\nvar isScanSet = flow.get(\"scanset\");\nif (isScanSet === \"false\") {\n    msg.payload = \"@\" + name + \" Hi \"+ nickname + \"! https://twitter.com/DiamondRPi/status/1034833808963592192 I don't understand this tweet, sorry! If you're trying to use the RPi beamline, please check out my bio for info. If not, feel free to take a look at instagram.com/diamondrpi for more info on the project!\";\n    return msg;\n}",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1210,
+        "y": 360,
+        "wires": [
+            [
+                "2292dd5.bd289a2",
+                "d91f47d6.be3e38"
+            ]
+        ]
+    },
+    {
+        "id": "785f3688.0b1ee",
+        "type": "twitter out",
+        "z": "eb846657.aa79d8",
+        "twitter": "",
+        "name": "Tweet",
+        "x": 1490,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "154f7ba3.1eea94",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "GDA",
+        "x": 290,
+        "y": 540,
+        "wires": [
+            [
+                "8ebbcfcd.239bb",
+                "f6b268d4.7b3b3"
+            ],
+            [
+                "229c281f.996e5"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "297a5aa.94ee4a6",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "write ssh to gda",
+        "func": "var whichSample =flow.get(\"sample\");\nmsg.payload = \"ssh localhost -p 2222 'roboscan(\" + whichSample + \")' |grep '^\\\\*\\\\*\\\\* '|cut -c 5-\";\n    return msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 130,
+        "y": 540,
+        "wires": [
+            [
+                "154f7ba3.1eea94",
+                "7799a1d9.5e9a58"
+            ]
+        ]
+    },
+    {
+        "id": "8ebbcfcd.239bb",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "using output, write function to savu",
+        "func": "var GDAfile=msg.payload.trim();\nmsg.payload = \"export DISPLAY=:0;rm -rf /tmp/rpi;export PYTHONPATH=/home/pi/savu/Savu;python /home/pi/savu/Savu/savu/tomo_recon.py -f rpi \" + GDAfile + \" /home/pi/savu/Savu/low_quality_recon.nxs /tmp/\";\n    return msg;\n",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 540,
+        "y": 520,
+        "wires": [
+            [
+                "300cb907.ef1fee",
+                "f21b8735.dfe4a"
+            ]
+        ]
+    },
+    {
+        "id": "300cb907.ef1fee",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "",
+        "addpay": true,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "Savu",
+        "x": 770,
+        "y": 540,
+        "wires": [
+            [
+                "3925401.a89334"
+            ],
+            [
+                "6928d00b.821f88",
+                "ec26a829.6b4048"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "ca1a2a1.469dfd8",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "attach images",
+        "func": "var fs = global.get('fs');\nmsg.media = fs.readFileSync(\"/tmp/rpi/OrthoSlice/scan.png\");\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1200,
+        "y": 800,
+        "wires": [
+            [
+                "2292dd5.bd289a2",
+                "a77f50c5.3bfb68"
+            ]
+        ]
+    },
+    {
+        "id": "6e98b983.5e1ec8",
+        "type": "twitter out",
+        "z": "eb846657.aa79d8",
+        "twitter": "",
+        "name": "Tweet",
+        "x": 1670,
+        "y": 800,
+        "wires": []
+    },
+    {
+        "id": "bb1c84bf.eebbf8",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "Tell API no scan currently running",
+        "func": "flow.set(\"scanset\",\"false\");\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 360,
+        "y": 240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "8a4109bb.de768",
+        "type": "delay",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "x": 1040,
+        "y": 360,
+        "wires": [
+            [
+                "caf7d3fc.48551"
+            ]
+        ]
+    },
+    {
+        "id": "d91f47d6.be3e38",
+        "type": "trigger",
+        "z": "eb846657.aa79d8",
+        "op1": "",
+        "op2": "",
+        "op1type": "nul",
+        "op2type": "payl",
+        "duration": "5",
+        "extend": false,
+        "units": "s",
+        "reset": "",
+        "bytopic": "all",
+        "name": "",
+        "x": 1360,
+        "y": 340,
+        "wires": [
+            [
+                "785f3688.0b1ee",
+                "c18de3a6.cca388"
+            ]
+        ]
+    },
+    {
+        "id": "ca2ff3a7.7e756",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "write tweet",
+        "func": "var whichSample =flow.get(\"sample\");\nvar name = flow.get(\"name\");\nvar nickname = flow.get(\"nickname\");\n\nflow.set(\"scanset\",\"false\");\n\nmsg.payload = \"@\" + name + \" Hi \"+ nickname + \"! You just scanned sample \" +whichSample;\nreturn msg;",
+        "outputs": 1,
+        "noerr": 0,
+        "x": 1530,
+        "y": 800,
+        "wires": [
+            [
+                "6e98b983.5e1ec8",
+                "4cb4cba.f38db34"
+            ]
+        ]
+    },
+    {
+        "id": "51c35659.60bef",
+        "type": "twitter in",
+        "z": "eb846657.aa79d8",
+        "twitter": "",
+        "tags": "@DiamondRPi",
+        "user": "false",
+        "name": "",
+        "topic": "tweets",
+        "inputs": 1,
+        "x": 90,
+        "y": 340,
+        "wires": [
+            [
+                "8d9ec36d.8f23e8",
+                "6781e6b6.17dbd8"
+            ]
+        ]
+    },
+    {
+        "id": "c18de3a6.cca388",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1510,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "7d183c53.5ac7ac",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1360,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "7799a1d9.5e9a58",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 310,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "4531a03a.9609d",
+        "type": "function",
+        "z": "eb846657.aa79d8",
+        "name": "which scan no. is it",
+        "func": "if (msg.payload === \"1\" ) {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"2\" ) {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"3\" ) {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"4\") {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"5\") {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"6\") {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"7\") {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"8\") {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"9\") {\nreturn [ msg, null ];\n\n} else if (msg.payload === \"10\") {\nreturn [ msg, null ];\n\n} else {\nreturn [ null, msg];\n}",
+        "outputs": 2,
+        "noerr": 0,
+        "x": 850,
+        "y": 340,
+        "wires": [
+            [
+                "8c38e1.41edef2",
+                "2f6319f9.74f1ee"
+            ],
+            [
+                "8a4109bb.de768",
+                "1294583d.17faa"
+            ]
+        ]
+    },
+    {
+        "id": "1294583d.17faa",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1060,
+        "y": 440,
+        "wires": []
+    },
+    {
+        "id": "ca98d39c.b685b8",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 460,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "3b714376.7bfc4c",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 560,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "2e92e813.0a0568",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 560,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "6781e6b6.17dbd8",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "x": 230,
+        "y": 380,
+        "wires": []
+    },
+    {
+        "id": "f6b268d4.7b3b3",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 500,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "229c281f.996e5",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 510,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "f21b8735.dfe4a",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 790,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "3925401.a89334",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1080,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "6928d00b.821f88",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1090,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "19090160.d41617",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "true",
+        "x": 1060,
+        "y": 720,
+        "wires": []
+    },
+    {
+        "id": "a77f50c5.3bfb68",
+        "type": "delay",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "x": 1360,
+        "y": 800,
+        "wires": [
+            [
+                "ca2ff3a7.7e756"
+            ]
+        ]
+    },
+    {
+        "id": "ae93151b.7a77",
+        "type": "delay",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "5",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "x": 640,
+        "y": 440,
+        "wires": [
+            [
+                "297a5aa.94ee4a6"
+            ]
+        ]
+    },
+    {
+        "id": "f150fb4b.59598",
+        "type": "inject",
+        "z": "eb846657.aa79d8",
+        "name": "filename test",
+        "topic": "",
+        "payload": "/home/pi/gda_data_non_live/2018/174/",
+        "payloadType": "str",
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "x": 270,
+        "y": 480,
+        "wires": [
+            [
+                "8ebbcfcd.239bb"
+            ]
+        ]
+    },
+    {
+        "id": "2f6319f9.74f1ee",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1070,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "ec26a829.6b4048",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "convert -rotate \"90\" /tmp/rpi/OrthoSlice/VOLUME_XY_000.png /tmp/rpi/OrthoSlice/VOLUME_XY_000.png",
+        "addpay": false,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "Rotate",
+        "x": 870,
+        "y": 800,
+        "wires": [
+            [
+                "10840ecb.c3d161"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "10840ecb.c3d161",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "convert /tmp/rpi/OrthoSlice/VOLUME_XY_000.png /tmp/rpi/OrthoSlice/VOLUME_XZ_000.png /tmp/rpi/OrthoSlice/VOLUME_YZ_000.png -append /tmp/rpi/OrthoSlice/scan.png",
+        "addpay": false,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "Tile images",
+        "x": 1030,
+        "y": 800,
+        "wires": [
+            [
+                "ca1a2a1.469dfd8"
+            ],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "4cb4cba.f38db34",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1690,
+        "y": 840,
+        "wires": []
+    },
+    {
+        "id": "aa6d30d5.54036",
+        "type": "rpi-gpio out",
+        "z": "eb846657.aa79d8",
+        "name": "On? LED",
+        "pin": "16",
+        "set": true,
+        "level": "0",
+        "freq": "",
+        "out": "out",
+        "x": 460,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "9995f9c3.8c587",
+        "type": "rpi-gpio in",
+        "z": "eb846657.aa79d8",
+        "name": "Safe Shutdown",
+        "pin": "18",
+        "intype": "up",
+        "debounce": "25",
+        "read": false,
+        "x": 900,
+        "y": 120,
+        "wires": [
+            [
+                "114e2980.18eeef",
+                "bdaf4da5.306b18"
+            ]
+        ]
+    },
+    {
+        "id": "d091195e.2652a8",
+        "type": "exec",
+        "z": "eb846657.aa79d8",
+        "command": "sudo shutdown -h now",
+        "addpay": false,
+        "append": "",
+        "useSpawn": "false",
+        "timer": "",
+        "oldrc": false,
+        "name": "Shutdown",
+        "x": 1260,
+        "y": 140,
+        "wires": [
+            [],
+            [],
+            []
+        ]
+    },
+    {
+        "id": "114e2980.18eeef",
+        "type": "rpi-gpio out",
+        "z": "eb846657.aa79d8",
+        "name": "Off LED",
+        "pin": "16",
+        "set": false,
+        "level": "0",
+        "freq": "",
+        "out": "out",
+        "x": 1080,
+        "y": 80,
+        "wires": []
+    },
+    {
+        "id": "bdaf4da5.306b18",
+        "type": "delay",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "10",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "x": 1080,
+        "y": 140,
+        "wires": [
+            [
+                "fe6ca5c5.b1c758",
+                "d091195e.2652a8"
+            ]
+        ]
+    },
+    {
+        "id": "fe6ca5c5.b1c758",
+        "type": "debug",
+        "z": "eb846657.aa79d8",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "x": 1230,
+        "y": 200,
+        "wires": []
+    }
+]
